@@ -1,0 +1,1754 @@
+```html
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SoelSMP S2 Chat — Community Relay</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Tone.js for subtle synthesized UI sound effects (no external audio URLs) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    
+    <!-- Google Fonts: Inter & JetBrains Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        obsidian: {
+                            950: '#060911',
+                            900: '#0b101d',
+                            850: '#101728',
+                            800: '#162036',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* Custom Obsidian Grid Background & Scrollbars */
+        body {
+            background-color: #060911;
+            background-image: 
+                radial-gradient(circle at 15% 15%, rgba(16, 185, 129, 0.08) 0%, transparent 40%),
+                radial-gradient(circle at 85% 85%, rgba(6, 182, 212, 0.08) 0%, transparent 40%),
+                linear-gradient(to right, rgba(30, 41, 59, 0.25) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(30, 41, 59, 0.25) 1px, transparent 1px);
+            background-size: 100% 100%, 100% 100%, 36px 36px, 36px 36px;
+        }
+
+        /* Custom sleek scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(11, 16, 29, 0.6);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(51, 65, 85, 0.8);
+            border-radius: 9999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(16, 185, 129, 0.6);
+        }
+
+        /* Glowing Gold/Crimson Admin Badge Animation */
+        @keyframes adminPulse {
+            0%, 100% {
+                box-shadow: 0 0 10px rgba(245, 158, 11, 0.45), 0 0 20px rgba(225, 29, 72, 0.25);
+            }
+            50% {
+                box-shadow: 0 0 16px rgba(245, 158, 11, 0.75), 0 0 28px rgba(225, 29, 72, 0.45);
+            }
+        }
+
+        .admin-badge-glow {
+            background: linear-gradient(135deg, #f59e0b 0%, #ef4444 55%, #be123c 100%);
+            animation: adminPulse 2.8s infinite ease-in-out;
+        }
+
+        .announcement-card {
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.14) 0%, rgba(225, 29, 72, 0.14) 100%);
+            border: 1px solid rgba(245, 158, 11, 0.45);
+            box-shadow: 0 4px 24px -4px rgba(245, 158, 11, 0.18);
+        }
+
+        @keyframes fadeSlideUp {
+            from {
+                opacity: 0;
+                transform: translateY(8px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .msg-enter {
+            animation: fadeSlideUp 0.22s ease-out forwards;
+        }
+    </style>
+</head>
+<body class="text-slate-100 antialiased min-h-screen flex flex-col overflow-x-hidden selection:bg-emerald-500/30 selection:text-emerald-200">
+
+    <!-- ===================================================================== -->
+    <!-- TOAST NOTIFICATION CONTAINER (Replaces browser alert())               -->
+    <!-- ===================================================================== -->
+    <div id="toast-container" class="fixed top-4 right-4 z-50 flex flex-col gap-2 max-w-sm w-[calc(100%-2rem)] pointer-events-none"></div>
+
+    <!-- ===================================================================== -->
+    <!-- CUSTOM CONFIRMATION MODAL (Replaces browser confirm())                -->
+    <!-- ===================================================================== -->
+    <div id="confirm-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/75 backdrop-blur-sm p-4">
+        <div class="bg-obsidian-900 border border-slate-700/80 rounded-2xl max-w-md w-full p-6 shadow-2xl transform transition-all">
+            <div class="flex items-center gap-3 mb-3">
+                <div class="w-10 h-10 rounded-xl bg-rose-500/15 border border-rose-500/30 flex items-center justify-center text-rose-400 shrink-0">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                    </svg>
+                </div>
+                <h3 id="confirm-modal-title" class="text-lg font-bold text-white">Confirm Action</h3>
+            </div>
+            <p id="confirm-modal-message" class="text-sm text-slate-300 leading-relaxed mb-6">
+                Are you sure you want to proceed?
+            </p>
+            <div class="flex items-center justify-end gap-3">
+                <button id="confirm-modal-cancel" type="button" class="px-4 py-2.5 rounded-xl text-sm font-medium bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition cursor-pointer">
+                    Cancel
+                </button>
+                <button id="confirm-modal-ok" type="button" class="px-4 py-2.5 rounded-xl text-sm font-semibold bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 text-white shadow-lg shadow-rose-900/30 transition cursor-pointer">
+                    Confirm Delete
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===================================================================== -->
+    <!-- VIEW 1: AUTHENTICATION GATE (Member Login/Register & Admin Access)    -->
+    <!-- ===================================================================== -->
+    <main id="auth-view" class="flex-1 flex items-center justify-center p-4 sm:p-6">
+        <div class="w-full max-w-md">
+            <!-- Server Brand Header -->
+            <div class="text-center mb-6">
+                <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-cyan-500/20 border border-emerald-500/40 shadow-lg shadow-emerald-950/50 mb-4">
+                    <!-- Custom Emerald SMP Emblem SVG -->
+                    <svg class="w-9 h-9 text-emerald-400" viewBox="0 0 32 32" fill="none">
+                        <polygon points="16,2 27,9 27,23 16,30 5,23 5,9" fill="url(#emeraldGrad)" stroke="#34d399" stroke-width="1.5"/>
+                        <polygon points="16,6 23,11 23,21 16,26 9,21 9,11" fill="#064e3b" fill-opacity="0.55" stroke="#6ee7b7" stroke-width="1"/>
+                        <path d="M16 2V30M5 9L27 23M27 9L5 23" stroke="#a7f3d0" stroke-opacity="0.35" stroke-width="1"/>
+                        <defs>
+                            <linearGradient id="emeraldGrad" x1="5" y1="2" x2="27" y2="30" gradientUnits="userSpaceOnUse">
+                                <stop stop-color="#10b981"/>
+                                <stop offset="1" stop-color="#06b6d4"/>
+                            </linearGradient>
+                        </defs>
+                    </svg>
+                </div>
+                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/25 text-emerald-300 text-xs font-mono mb-2">
+                    <span id="auth-connection-dot" class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+                    <span id="auth-connection-text">CONNECTING TO RELAY...</span>
+                </div>
+                <h1 class="text-3xl font-extrabold tracking-tight text-white">
+                    SoelSMP <span class="bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">S2 Chat</span>
+                </h1>
+                <p class="text-sm text-slate-400 mt-1">Encrypted community comms for Season 2 players & staff</p>
+            </div>
+
+            <!-- Saved Credentials Quick-Fill Card (Shown when saved password exists on this device) -->
+            <div id="saved-credentials-card" class="hidden mb-4 bg-obsidian-900/95 border border-emerald-500/35 rounded-2xl p-4 shadow-xl backdrop-blur-md">
+                <div class="flex items-center justify-between gap-3">
+                    <div class="flex items-center gap-3 min-w-0">
+                        <div id="saved-avatar" class="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center font-bold text-emerald-300 shrink-0">
+                            S
+                        </div>
+                        <div class="min-w-0">
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs font-medium text-slate-400">Saved on this device</span>
+                                <span id="saved-role-badge" class="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">[PLAYER]</span>
+                            </div>
+                            <p id="saved-username-display" class="text-sm font-bold text-white truncate">PlayerName</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2 shrink-0">
+                        <button id="quick-login-btn" type="button" class="px-3.5 py-2 rounded-xl text-xs font-bold bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 text-slate-950 shadow-md transition cursor-pointer">
+                            One-Click Login
+                        </button>
+                        <button id="forget-saved-btn" type="button" title="Remove saved password" class="p-2 rounded-xl bg-slate-800 hover:bg-rose-500/20 text-slate-400 hover:text-rose-400 border border-slate-700 transition cursor-pointer">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Auth Card -->
+            <div class="bg-obsidian-900/90 border border-slate-800 rounded-2xl shadow-2xl backdrop-blur-xl overflow-hidden">
+                <!-- Role Tabs: Member vs Admin -->
+                <div class="grid grid-cols-2 border-b border-slate-800 bg-obsidian-950/60 p-1.5 gap-1.5">
+                    <button id="tab-member" type="button" class="py-2.5 px-3 rounded-xl text-xs sm:text-sm font-semibold transition flex items-center justify-center gap-2 bg-slate-800 text-emerald-300 border border-emerald-500/30 shadow-sm cursor-pointer">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
+                        </svg>
+                        <span>Member Login / Register</span>
+                    </button>
+                    <button id="tab-admin" type="button" class="py-2.5 px-3 rounded-xl text-xs sm:text-sm font-semibold transition flex items-center justify-center gap-2 text-slate-400 hover:text-amber-300 hover:bg-slate-800/50 cursor-pointer">
+                        <svg class="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                        </svg>
+                        <span>Admin Access</span>
+                    </button>
+                </div>
+
+                <!-- Inline Auth Error / Status Alert -->
+                <div id="auth-error-box" class="hidden mx-6 mt-5 p-3 rounded-xl bg-rose-500/15 border border-rose-500/40 text-rose-300 text-xs flex items-start gap-2.5">
+                    <svg class="w-4 h-4 text-rose-400 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    <span id="auth-error-text">Authentication error.</span>
+                </div>
+
+                <!-- ========================================================= -->
+                <!-- TAB PANEL 1: MEMBER LOGIN / REGISTER                      -->
+                <!-- ========================================================= -->
+                <form id="member-form" class="p-6 space-y-4">
+                    <!-- Sub-mode switcher: Sign In vs Create New Account -->
+                    <div class="flex items-center justify-between bg-obsidian-950/80 p-1 rounded-xl border border-slate-800">
+                        <button id="member-mode-login" type="button" class="flex-1 py-1.5 text-xs font-semibold rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 transition cursor-pointer">
+                            Existing Account
+                        </button>
+                        <button id="member-mode-register" type="button" class="flex-1 py-1.5 text-xs font-semibold rounded-lg text-slate-400 hover:text-slate-200 transition cursor-pointer">
+                            Create Account
+                        </button>
+                    </div>
+
+                    <div>
+                        <label for="member-username" class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">
+                            Minecraft / Player Username
+                        </label>
+                        <input id="member-username" type="text" maxlength="20" autocomplete="username" required
+                            placeholder="e.g. SteveBuilder99"
+                            class="w-full px-4 py-3 rounded-xl bg-obsidian-950 border border-slate-700/80 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition">
+                    </div>
+
+                    <div>
+                        <label for="member-password" class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">
+                            Custom Account Password
+                        </label>
+                        <div class="relative">
+                            <input id="member-password" type="password" maxlength="64" autocomplete="current-password" required
+                                placeholder="Enter your personal password"
+                                class="w-full px-4 py-3 pr-11 rounded-xl bg-obsidian-950 border border-slate-700/80 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition">
+                            <button type="button" data-toggle-pass="member-password" class="toggle-pass-btn absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 p-1 cursor-pointer" title="Show/Hide Password">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                                </svg>
+                            </button>
+                        </div>
+                        <p id="member-mode-hint" class="text-[11px] text-slate-400 mt-1.5">
+                            Log in with your registered player account. Passwords are SHA-256 hashed.
+                        </p>
+                    </div>
+
+                    <!-- Save Password Checkbox -->
+                    <label class="flex items-center gap-2.5 cursor-pointer select-none pt-1">
+                        <input id="member-save-pass" type="checkbox" checked
+                            class="w-4 h-4 rounded border-slate-600 bg-obsidian-950 text-emerald-500 focus:ring-emerald-500/30 cursor-pointer">
+                        <span class="text-xs text-slate-300">Save Password on this device</span>
+                    </label>
+
+                    <button id="member-submit-btn" type="submit"
+                        class="w-full py-3 px-4 rounded-xl font-bold text-sm bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 text-slate-950 shadow-lg shadow-emerald-950/50 transition transform active:scale-[0.99] cursor-pointer">
+                        Enter SoelSMP S2 Chat
+                    </button>
+                </form>
+
+                <!-- ========================================================= -->
+                <!-- TAB PANEL 2: ADMIN ACCESS (Master Password Protected)     -->
+                <!-- ========================================================= -->
+                <form id="admin-form" class="hidden p-6 space-y-4">
+                    <div class="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center gap-3">
+                        <span class="admin-badge-glow text-[10px] font-mono font-extrabold text-white px-2 py-0.5 rounded shrink-0">
+                            [ADMIN]
+                        </span>
+                        <p class="text-xs text-amber-200/90">
+                            Staff authentication required. Grants message moderation, chat wipe & announcement powers.
+                        </p>
+                    </div>
+
+                    <div>
+                        <label for="admin-display-name" class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">
+                            Admin Display Name <span class="text-slate-500 font-normal normal-case">(Optional)</span>
+                        </label>
+                        <input id="admin-display-name" type="text" maxlength="20"
+                            placeholder="Defaults to 'Admin'"
+                            class="w-full px-4 py-3 rounded-xl bg-obsidian-950 border border-slate-700/80 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 transition">
+                    </div>
+
+                    <div>
+                        <label for="admin-password" class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">
+                            Master Admin Password
+                        </label>
+                        <div class="relative">
+                            <input id="admin-password" type="password" maxlength="64" required
+                                placeholder="Enter master admin password"
+                                class="w-full px-4 py-3 pr-11 rounded-xl bg-obsidian-950 border border-slate-700/80 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 transition">
+                            <button type="button" data-toggle-pass="admin-password" class="toggle-pass-btn absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 p-1 cursor-pointer" title="Show/Hide Password">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Save Password Checkbox -->
+                    <label class="flex items-center gap-2.5 cursor-pointer select-none pt-1">
+                        <input id="admin-save-pass" type="checkbox" checked
+                            class="w-4 h-4 rounded border-slate-600 bg-obsidian-950 text-amber-500 focus:ring-amber-500/30 cursor-pointer">
+                        <span class="text-xs text-slate-300">Save Password on this device</span>
+                    </label>
+
+                    <button id="admin-submit-btn" type="submit"
+                        class="w-full py-3 px-4 rounded-xl font-bold text-sm bg-gradient-to-r from-amber-500 via-orange-500 to-rose-600 hover:from-amber-400 hover:to-rose-500 text-white shadow-lg shadow-rose-950/50 transition transform active:scale-[0.99] cursor-pointer">
+                        Unlock Admin Console
+                    </button>
+                </form>
+            </div>
+        </div>
+    </main>
+
+    <!-- ===================================================================== -->
+    <!-- VIEW 2: REAL-TIME CHAT ROOM & ADMIN CONSOLE                           -->
+    <!-- ===================================================================== -->
+    <div id="chat-view" class="hidden flex-1 flex flex-col h-screen max-h-screen overflow-hidden">
+        
+        <!-- Top Navigation Header -->
+        <header class="bg-obsidian-900/95 border-b border-slate-800 px-3 sm:px-6 py-3 flex items-center justify-between gap-2 shrink-0 backdrop-blur-md z-20">
+            <div class="flex items-center gap-3 min-w-0">
+                <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500/20 to-cyan-500/20 border border-emerald-500/40 flex items-center justify-center shrink-0">
+                    <svg class="w-5 h-5 text-emerald-400" viewBox="0 0 32 32" fill="none">
+                        <polygon points="16,2 27,9 27,23 16,30 5,23 5,9" fill="#10b981" fill-opacity="0.35" stroke="#34d399" stroke-width="2"/>
+                    </svg>
+                </div>
+                <div class="min-w-0">
+                    <div class="flex items-center gap-2">
+                        <h1 class="text-base sm:text-lg font-extrabold text-white truncate">SoelSMP S2 Chat</h1>
+                        <span class="hidden sm:inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 text-[10px] font-mono">
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
+                            LIVE
+                        </span>
+                    </div>
+                    <p class="text-[11px] text-slate-400 font-mono truncate" id="header-msg-count">0 messages in feed</p>
+                </div>
+            </div>
+
+            <!-- Right Header Controls: Current User Pill, Sound Toggle, Mobile Drawer, Logout -->
+            <div class="flex items-center gap-2 shrink-0">
+                <!-- Current User Identity Badge -->
+                <div class="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-obsidian-950 border border-slate-800">
+                    <span id="header-role-badge" class="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                        [PLAYER]
+                    </span>
+                    <span id="header-username" class="text-xs font-bold text-slate-200 max-w-[120px] truncate">Player</span>
+                </div>
+
+                <!-- Sound Effects Toggle -->
+                <button id="sound-toggle-btn" type="button" title="Toggle chat sound chimes"
+                    class="p-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-emerald-400 border border-slate-700/80 transition cursor-pointer">
+                    <svg id="sound-icon-on" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/>
+                    </svg>
+                    <svg id="sound-icon-off" class="w-4 h-4 hidden text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15zM17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2"/>
+                    </svg>
+                </button>
+
+                <!-- Mobile Online Members Drawer Button -->
+                <button id="mobile-members-btn" type="button"
+                    class="lg:hidden flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-200 border border-slate-700/80 text-xs font-semibold transition cursor-pointer">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+                    <span id="mobile-online-count">1</span>
+                </button>
+
+                <!-- Logout Button -->
+                <button id="logout-btn" type="button" title="Log out / Switch Account"
+                    class="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800/80 hover:bg-rose-500/20 text-slate-300 hover:text-rose-300 border border-slate-700/80 hover:border-rose-500/40 text-xs font-semibold transition cursor-pointer">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+                    </svg>
+                    <span class="hidden sm:inline">Logout</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Workspace: Chat Stream + Online Members Sidebar -->
+        <div class="flex-1 flex overflow-hidden relative">
+            
+            <!-- Left/Center Chat Column -->
+            <section class="flex-1 flex flex-col min-w-0 relative">
+                
+                <!-- Admin Control Bar (STRICTLY VISIBLE ONLY FOR ADMIN) -->
+                <div id="admin-control-bar" class="hidden bg-gradient-to-r from-amber-950/60 via-obsidian-900 to-rose-950/60 border-b border-amber-500/30 px-4 py-2.5 flex flex-wrap items-center justify-between gap-2 shrink-0">
+                    <div class="flex items-center gap-2">
+                        <span class="admin-badge-glow text-[10px] font-mono font-extrabold text-white px-2 py-0.5 rounded">
+                            [ADMIN]
+                        </span>
+                        <span class="text-xs font-semibold text-amber-200">Staff Moderation Active</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <!-- Announcement Mode Toggle -->
+                        <button id="toggle-announcement-btn" type="button"
+                            class="px-3 py-1.5 rounded-lg text-xs font-bold bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 flex items-center gap-1.5 transition cursor-pointer">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"/>
+                            </svg>
+                            <span id="announcement-btn-label">Announcement Mode: OFF</span>
+                        </button>
+
+                        <!-- Clear Entire Chat History -->
+                        <button id="clear-chat-btn" type="button"
+                            class="px-3 py-1.5 rounded-lg text-xs font-bold bg-rose-600/25 hover:bg-rose-600/40 text-rose-300 border border-rose-500/40 flex items-center gap-1.5 transition cursor-pointer">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                            </svg>
+                            <span>Clear Chat</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Scrollable Messages Feed -->
+                <div id="messages-feed" class="flex-1 overflow-y-auto px-3 sm:px-6 py-4 space-y-3 scroll-smooth">
+                    <!-- Welcome Banner -->
+                    <div class="bg-obsidian-900/70 border border-slate-800/80 rounded-2xl p-4 text-center max-w-xl mx-auto my-2">
+                        <p class="text-xs font-mono text-emerald-400 mb-1">WELCOME TO SOELSMP SEASON 2</p>
+                        <p class="text-xs text-slate-400">
+                            Be respectful to fellow players, coordinate builds & trades, and watch for <span class="text-amber-400 font-semibold">[ANNOUNCEMENT]</span> broadcasts from Staff.
+                        </p>
+                    </div>
+                    <!-- Dynamic messages rendered here -->
+                </div>
+
+                <!-- Floating Scroll-to-Bottom Pill -->
+                <button id="scroll-bottom-btn" type="button"
+                    class="hidden absolute bottom-24 right-6 z-10 px-3.5 py-2 rounded-full bg-emerald-500 text-slate-950 font-bold text-xs shadow-xl hover:bg-emerald-400 transition flex items-center gap-1.5 cursor-pointer">
+                    <span>New Messages</span>
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 14l-7 7m0 0l-7-7m7 7V3"/>
+                    </svg>
+                </button>
+
+                <!-- Message Composer Bar -->
+                <div class="bg-obsidian-900/95 border-t border-slate-800 p-3 sm:px-6 sm:py-4 shrink-0 backdrop-blur-md">
+                    <form id="message-form" class="max-w-5xl mx-auto">
+                        <!-- Announcement Mode Active Indicator Banner -->
+                        <div id="announcement-composer-banner" class="hidden mb-2 px-3 py-1.5 rounded-xl bg-amber-500/15 border border-amber-500/35 flex items-center justify-between text-xs text-amber-300">
+                            <span class="font-semibold flex items-center gap-1.5">
+                                <span class="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span>
+                                Broadcasting as highlighted [ANNOUNCEMENT]
+                            </span>
+                            <button type="button" id="cancel-announcement-mode" class="text-amber-200 underline hover:text-white cursor-pointer">Switch to normal chat</button>
+                        </div>
+
+                        <div class="flex items-end gap-2.5">
+                            <div class="flex-1 relative">
+                                <input id="message-input" type="text" maxlength="500" autocomplete="off"
+                                    placeholder="Message SoelSMP S2..."
+                                    class="w-full px-4 py-3 pr-16 rounded-xl bg-obsidian-950 border border-slate-700/90 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition">
+                                <span id="char-counter" class="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-mono text-slate-500 pointer-events-none">
+                                    0/500
+                                </span>
+                            </div>
+
+                            <button id="send-message-btn" type="submit"
+                                class="px-4 sm:px-5 py-3 rounded-xl font-bold text-sm bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 text-slate-950 shadow-lg shadow-emerald-950/40 transition flex items-center gap-2 shrink-0 cursor-pointer">
+                                <span class="hidden sm:inline">Send</span>
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </section>
+
+            <!-- Mobile Drawer Backdrop -->
+            <div id="members-backdrop" class="hidden fixed inset-0 bg-black/65 backdrop-blur-xs z-30 lg:hidden"></div>
+
+            <!-- Right Sidebar / Mobile Slide-Over Drawer: Online Members -->
+            <aside id="members-sidebar"
+                class="fixed lg:static inset-y-0 right-0 z-40 w-72 bg-obsidian-900 border-l border-slate-800 flex flex-col transform translate-x-full lg:translate-x-0 transition-transform duration-200 ease-out shrink-0">
+                
+                <div class="p-4 border-b border-slate-800 flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                        <h2 class="text-xs font-bold uppercase tracking-wider text-slate-300">
+                            Online Members (<span id="sidebar-online-count">0</span>)
+                        </h2>
+                    </div>
+                    <button id="close-members-drawer" type="button" class="lg:hidden p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 cursor-pointer">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+
+                <div id="online-members-list" class="flex-1 overflow-y-auto p-3 space-y-4">
+                    <!-- Populated dynamically with Admins & Online Players -->
+                </div>
+
+                <!-- Server Info Footer inside Sidebar -->
+                <div class="p-4 border-t border-slate-800 bg-obsidian-950/50 space-y-2">
+                    <div class="flex items-center justify-between text-xs">
+                        <span class="text-slate-400">Season</span>
+                        <span class="font-mono font-bold text-emerald-400">SoelSMP S2</span>
+                    </div>
+                    <div class="flex items-center justify-between text-xs">
+                        <span class="text-slate-400">Your Session</span>
+                        <span id="sidebar-self-role" class="font-mono font-bold text-cyan-400">[PLAYER]</span>
+                    </div>
+                </div>
+            </aside>
+        </div>
+    </div>
+
+    <!-- ===================================================================== -->
+    <!-- APPLICATION LOGIC (Firebase Auth, Firestore Real-Time, SHA-256)       -->
+    <!-- ===================================================================== -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { 
+            getFirestore, 
+            doc, 
+            getDoc, 
+            setDoc, 
+            addDoc, 
+            deleteDoc, 
+            onSnapshot, 
+            collection 
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // =========================================================================
+        // 1. CONFIGURATION & APPLICATION STATE
+        // =========================================================================
+        const MASTER_ADMIN_PASSWORD = "soelsmp s2";
+        const appId = typeof __app_id !== "undefined" ? __app_id : "soelsmp-s2-default";
+        const firebaseConfig = typeof __firebase_config !== "undefined" ? JSON.parse(__firebase_config) : null;
+
+        let app = null;
+        let auth = null;
+        let db = null;
+        let firebaseUser = null;
+        let useFallbackMemory = false;
+
+        // Current authenticated chat user profile
+        let currentUser = null; // { username: string, role: 'ADMIN' | 'PLAYER', sessionId: string }
+        let savedCredentialsCache = null; // Loaded from Firestore private user path
+        let memberAuthMode = "login"; // 'login' | 'register'
+        let isAnnouncementMode = false;
+        let soundEnabled = true;
+        let isInitialMessagesLoad = true;
+
+        // Real-time unsubscribe handlers & intervals
+        let unsubscribeMessages = null;
+        let unsubscribePresence = null;
+        let presenceInterval = null;
+        let cachedMessages = [];
+
+        // In-memory fallback stores (used only if __firebase_config is absent)
+        const memoryFallback = {
+            users: new Map(),
+            messages: [],
+            presence: new Map(),
+            savedLogin: null
+        };
+
+        // =========================================================================
+        // 2. DOM ELEMENT REFERENCES
+        // =========================================================================
+        const els = {
+            authView: document.getElementById("auth-view"),
+            chatView: document.getElementById("chat-view"),
+            authConnDot: document.getElementById("auth-connection-dot"),
+            authConnText: document.getElementById("auth-connection-text"),
+            authErrorBox: document.getElementById("auth-error-box"),
+            authErrorText: document.getElementById("auth-error-text"),
+
+            // Saved credentials card
+            savedCard: document.getElementById("saved-credentials-card"),
+            savedAvatar: document.getElementById("saved-avatar"),
+            savedRoleBadge: document.getElementById("saved-role-badge"),
+            savedUsernameDisplay: document.getElementById("saved-username-display"),
+            quickLoginBtn: document.getElementById("quick-login-btn"),
+            forgetSavedBtn: document.getElementById("forget-saved-btn"),
+
+            // Auth tabs & forms
+            tabMember: document.getElementById("tab-member"),
+            tabAdmin: document.getElementById("tab-admin"),
+            memberForm: document.getElementById("member-form"),
+            adminForm: document.getElementById("admin-form"),
+            memberModeLogin: document.getElementById("member-mode-login"),
+            memberModeRegister: document.getElementById("member-mode-register"),
+            memberModeHint: document.getElementById("member-mode-hint"),
+            memberUsername: document.getElementById("member-username"),
+            memberPassword: document.getElementById("member-password"),
+            memberSavePass: document.getElementById("member-save-pass"),
+            memberSubmitBtn: document.getElementById("member-submit-btn"),
+            adminDisplayName: document.getElementById("admin-display-name"),
+            adminPassword: document.getElementById("admin-password"),
+            adminSavePass: document.getElementById("admin-save-pass"),
+            adminSubmitBtn: document.getElementById("admin-submit-btn"),
+
+            // Chat header & controls
+            headerMsgCount: document.getElementById("header-msg-count"),
+            headerRoleBadge: document.getElementById("header-role-badge"),
+            headerUsername: document.getElementById("header-username"),
+            soundToggleBtn: document.getElementById("sound-toggle-btn"),
+            soundIconOn: document.getElementById("sound-icon-on"),
+            soundIconOff: document.getElementById("sound-icon-off"),
+            logoutBtn: document.getElementById("logout-btn"),
+
+            // Admin bar
+            adminControlBar: document.getElementById("admin-control-bar"),
+            toggleAnnouncementBtn: document.getElementById("toggle-announcement-btn"),
+            announcementBtnLabel: document.getElementById("announcement-btn-label"),
+            clearChatBtn: document.getElementById("clear-chat-btn"),
+            announcementComposerBanner: document.getElementById("announcement-composer-banner"),
+            cancelAnnouncementMode: document.getElementById("cancel-announcement-mode"),
+
+            // Feed & composer
+            messagesFeed: document.getElementById("messages-feed"),
+            scrollBottomBtn: document.getElementById("scroll-bottom-btn"),
+            messageForm: document.getElementById("message-form"),
+            messageInput: document.getElementById("message-input"),
+            charCounter: document.getElementById("char-counter"),
+            sendMessageBtn: document.getElementById("send-message-btn"),
+
+            // Members sidebar / mobile drawer
+            mobileMembersBtn: document.getElementById("mobile-members-btn"),
+            mobileOnlineCount: document.getElementById("mobile-online-count"),
+            membersBackdrop: document.getElementById("members-backdrop"),
+            membersSidebar: document.getElementById("members-sidebar"),
+            closeMembersDrawer: document.getElementById("close-members-drawer"),
+            sidebarOnlineCount: document.getElementById("sidebar-online-count"),
+            onlineMembersList: document.getElementById("online-members-list"),
+            sidebarSelfRole: document.getElementById("sidebar-self-role"),
+
+            // Modals & toasts
+            toastContainer: document.getElementById("toast-container"),
+            confirmModal: document.getElementById("confirm-modal"),
+            confirmModalTitle: document.getElementById("confirm-modal-title"),
+            confirmModalMessage: document.getElementById("confirm-modal-message"),
+            confirmModalCancel: document.getElementById("confirm-modal-cancel"),
+            confirmModalOk: document.getElementById("confirm-modal-ok"),
+        };
+
+        // =========================================================================
+        // 3. UTILITY FUNCTIONS (SHA-256 Hashing, XSS Escaping, Sound, Modals)
+        // =========================================================================
+
+        /**
+         * Hashes a plaintext password using Web Crypto API (SHA-256).
+         */
+        async function hashPassword(password) {
+            const encoder = new TextEncoder();
+            const data = encoder.encode(password);
+            const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            return hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
+        }
+
+        /**
+         * Escapes HTML special characters to prevent XSS injection.
+         */
+        function escapeHtml(str) {
+            const div = document.createElement("div");
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        /**
+         * Formats epoch milliseconds into clean readable time.
+         */
+        function formatTimestamp(ms) {
+            if (!ms) return "Just now";
+            const date = new Date(ms);
+            const now = new Date();
+            const isToday = date.toDateString() === now.toDateString();
+            const timeStr = date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+            if (isToday) return timeStr;
+            const dateStr = date.toLocaleDateString([], { month: "short", day: "numeric" });
+            return `${dateStr}, ${timeStr}`;
+        }
+
+        /**
+         * Generates deterministic Tailwind gradient classes for user avatars.
+         */
+        function getAvatarStyle(username, role) {
+            if (role === "ADMIN") {
+                return "from-amber-500 to-rose-600 text-white border-amber-400/60";
+            }
+            const palettes = [
+                "from-emerald-500 to-teal-600 text-white border-emerald-400/50",
+                "from-cyan-500 to-blue-600 text-white border-cyan-400/50",
+                "from-indigo-500 to-purple-600 text-white border-indigo-400/50",
+                "from-teal-500 to-emerald-600 text-white border-teal-400/50",
+                "from-sky-500 to-indigo-600 text-white border-sky-400/50",
+            ];
+            let hash = 0;
+            for (let i = 0; i < username.length; i++) {
+                hash = username.charCodeAt(i) + ((hash << 5) - hash);
+            }
+            return palettes[Math.abs(hash) % palettes.length];
+        }
+
+        /**
+         * Displays a non-blocking toast message.
+         */
+        function showToast(message, type = "info") {
+            const toast = document.createElement("div");
+            const styles = {
+                success: "bg-obsidian-900/95 border-emerald-500/50 text-emerald-200",
+                error: "bg-obsidian-900/95 border-rose-500/50 text-rose-200",
+                admin: "bg-obsidian-900/95 border-amber-500/50 text-amber-200",
+                info: "bg-obsidian-900/95 border-cyan-500/50 text-cyan-200"
+            };
+            toast.className = `pointer-events-auto px-4 py-3 rounded-xl border shadow-2xl backdrop-blur-md text-xs font-medium flex items-center gap-2.5 msg-enter ${styles[type] || styles.info}`;
+            toast.innerHTML = `<span class="w-2 h-2 rounded-full bg-current shrink-0"></span><span>${escapeHtml(message)}</span>`;
+            els.toastContainer.appendChild(toast);
+
+            setTimeout(() => {
+                toast.style.opacity = "0";
+                toast.style.transform = "translateY(-6px)";
+                toast.style.transition = "all 0.2s ease";
+                setTimeout(() => toast.remove(), 220);
+            }, 3400);
+        }
+
+        /**
+         * Custom async confirmation modal replacing window.confirm().
+         */
+        function showConfirmModal(title, message, confirmLabel = "Confirm") {
+            return new Promise((resolve) => {
+                els.confirmModalTitle.textContent = title;
+                els.confirmModalMessage.textContent = message;
+                els.confirmModalOk.textContent = confirmLabel;
+                els.confirmModal.classList.remove("hidden");
+                els.confirmModal.classList.add("flex");
+
+                const cleanup = (result) => {
+                    els.confirmModal.classList.add("hidden");
+                    els.confirmModal.classList.remove("flex");
+                    els.confirmModalCancel.removeEventListener("click", onCancel);
+                    els.confirmModalOk.removeEventListener("click", onOk);
+                    resolve(result);
+                };
+
+                const onCancel = () => cleanup(false);
+                const onOk = () => cleanup(true);
+
+                els.confirmModalCancel.addEventListener("click", onCancel);
+                els.confirmModalOk.addEventListener("click", onOk);
+            });
+        }
+
+        /**
+         * Plays subtle synthesized Minecraft-inspired chimes using Tone.js.
+         */
+        function playChatChime(type = "message") {
+            if (!soundEnabled || typeof Tone === "undefined") return;
+            try {
+                if (Tone.context.state !== "running") {
+                    Tone.start();
+                }
+                const synth = new Tone.Synth({
+                    oscillator: { type: "triangle" },
+                    envelope: { attack: 0.01, decay: 0.12, sustain: 0.02, release: 0.2 }
+                }).toDestination();
+                synth.volume.value = -16;
+
+                if (type === "announcement") {
+                    synth.triggerAttackRelease("E5", "16n", Tone.now());
+                    synth.triggerAttackRelease("B5", "8n", Tone.now() + 0.09);
+                } else if (type === "send") {
+                    synth.triggerAttackRelease("G5", "32n", Tone.now());
+                } else {
+                    synth.triggerAttackRelease("E5", "32n", Tone.now());
+                }
+            } catch (_) {
+                // Ignore audio context restrictions prior to user interaction
+            }
+        }
+
+        // =========================================================================
+        // 4. FIREBASE INITIALIZATION & AUTHENTICATION (Rule 3 Compliant)
+        // =========================================================================
+        async function initializeBackend() {
+            if (!firebaseConfig) {
+                useFallbackMemory = true;
+                setConnectionStatus(true, "LOCAL SESSION READY");
+                return;
+            }
+
+            try {
+                app = initializeApp(firebaseConfig);
+                auth = getAuth(app);
+                db = getFirestore(app);
+
+                // RULE 3: Always sign in with custom token or anonymously FIRST and await it
+                if (typeof __initial_auth_token !== "undefined" && __initial_auth_token) {
+                    const cred = await signInWithCustomToken(auth, __initial_auth_token);
+                    firebaseUser = cred.user;
+                } else {
+                    const cred = await signInAnonymously(auth);
+                    firebaseUser = cred.user;
+                }
+
+                setConnectionStatus(true, "RELAY ONLINE • SECURED");
+                await loadSavedDeviceCredentials();
+            } catch (err) {
+                console.error("Firebase init error:", err);
+                useFallbackMemory = true;
+                setConnectionStatus(true, "OFFLINE FALLBACK MODE");
+            }
+        }
+
+        function setConnectionStatus(connected, text) {
+            els.authConnText.textContent = text;
+            if (connected) {
+                els.authConnDot.className = "w-2 h-2 rounded-full bg-emerald-400";
+            } else {
+                els.authConnDot.className = "w-2 h-2 rounded-full bg-amber-400 animate-pulse";
+            }
+        }
+
+        // =========================================================================
+        // 5. SAVE PASSWORD ON THIS DEVICE (Private User Firestore Path)
+        // =========================================================================
+
+        /**
+         * Loads saved login credentials from the user's private Firestore path:
+         * /artifacts/{appId}/users/{userId}/preferences/savedLogin
+         */
+        async function loadSavedDeviceCredentials() {
+            if (useFallbackMemory) {
+                savedCredentialsCache = memoryFallback.savedLogin;
+                renderSavedCredentialsCard();
+                return;
+            }
+            if (!firebaseUser || !db) return;
+
+            try {
+                const savedRef = doc(db, "artifacts", appId, "users", firebaseUser.uid, "preferences", "savedLogin");
+                const snap = await getDoc(savedRef);
+                if (snap.exists()) {
+                    savedCredentialsCache = snap.data();
+                    renderSavedCredentialsCard();
+                } else {
+                    savedCredentialsCache = null;
+                    els.savedCard.classList.add("hidden");
+                }
+            } catch (err) {
+                console.warn("Could not load saved device credentials:", err);
+            }
+        }
+
+        /**
+         * Saves or removes credentials on this device based on the "Save Password" checkbox.
+         */
+        async function persistDeviceCredentials(shouldSave, payload) {
+            if (useFallbackMemory) {
+                memoryFallback.savedLogin = shouldSave ? payload : null;
+                savedCredentialsCache = memoryFallback.savedLogin;
+                return;
+            }
+            if (!firebaseUser || !db) return;
+
+            try {
+                const savedRef = doc(db, "artifacts", appId, "users", firebaseUser.uid, "preferences", "savedLogin");
+                if (shouldSave) {
+                    await setDoc(savedRef, payload);
+                    savedCredentialsCache = payload;
+                } else {
+                    await deleteDoc(savedRef);
+                    savedCredentialsCache = null;
+                }
+            } catch (err) {
+                console.warn("Could not update saved device credentials:", err);
+            }
+        }
+
+        /**
+         * Renders the One-Click Login card and pre-fills the matching form inputs.
+         */
+        function renderSavedCredentialsCard() {
+            if (!savedCredentialsCache) {
+                els.savedCard.classList.add("hidden");
+                return;
+            }
+
+            const isAdmin = savedCredentialsCache.mode === "admin";
+            const displayName = isAdmin
+                ? (savedCredentialsCache.adminName || "Admin")
+                : savedCredentialsCache.username;
+
+            els.savedUsernameDisplay.textContent = displayName;
+            els.savedAvatar.textContent = displayName.charAt(0).toUpperCase();
+
+            if (isAdmin) {
+                els.savedRoleBadge.textContent = "[ADMIN]";
+                els.savedRoleBadge.className = "admin-badge-glow text-[10px] font-mono font-extrabold px-1.5 py-0.5 rounded text-white";
+                els.savedAvatar.className = "w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-rose-600 flex items-center justify-center font-bold text-white shrink-0";
+                els.adminDisplayName.value = savedCredentialsCache.adminName || "";
+                els.adminPassword.value = savedCredentialsCache.password || "";
+                els.adminSavePass.checked = true;
+            } else {
+                els.savedRoleBadge.textContent = "[PLAYER]";
+                els.savedRoleBadge.className = "text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30";
+                els.savedAvatar.className = "w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center font-bold text-emerald-300 shrink-0";
+                els.memberUsername.value = savedCredentialsCache.username || "";
+                els.memberPassword.value = savedCredentialsCache.password || "";
+                els.memberSavePass.checked = true;
+            }
+
+            els.savedCard.classList.remove("hidden");
+        }
+
+        // =========================================================================
+        // 6. AUTHENTICATION HANDLERS (Member Login/Register & Admin Access)
+        // =========================================================================
+
+        function showAuthError(msg) {
+            els.authErrorText.textContent = msg;
+            els.authErrorBox.classList.remove("hidden");
+        }
+
+        function clearAuthError() {
+            els.authErrorBox.classList.add("hidden");
+        }
+
+        function switchAuthTab(tab) {
+            clearAuthError();
+            if (tab === "member") {
+                els.tabMember.className = "py-2.5 px-3 rounded-xl text-xs sm:text-sm font-semibold transition flex items-center justify-center gap-2 bg-slate-800 text-emerald-300 border border-emerald-500/30 shadow-sm cursor-pointer";
+                els.tabAdmin.className = "py-2.5 px-3 rounded-xl text-xs sm:text-sm font-semibold transition flex items-center justify-center gap-2 text-slate-400 hover:text-amber-300 hover:bg-slate-800/50 cursor-pointer";
+                els.memberForm.classList.remove("hidden");
+                els.adminForm.classList.add("hidden");
+            } else {
+                els.tabAdmin.className = "py-2.5 px-3 rounded-xl text-xs sm:text-sm font-semibold transition flex items-center justify-center gap-2 bg-slate-800 text-amber-300 border border-amber-500/35 shadow-sm cursor-pointer";
+                els.tabMember.className = "py-2.5 px-3 rounded-xl text-xs sm:text-sm font-semibold transition flex items-center justify-center gap-2 text-slate-400 hover:text-emerald-300 hover:bg-slate-800/50 cursor-pointer";
+                els.adminForm.classList.remove("hidden");
+                els.memberForm.classList.add("hidden");
+            }
+        }
+
+        function switchMemberSubMode(mode) {
+            memberAuthMode = mode;
+            clearAuthError();
+            if (mode === "login") {
+                els.memberModeLogin.className = "flex-1 py-1.5 text-xs font-semibold rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 transition cursor-pointer";
+                els.memberModeRegister.className = "flex-1 py-1.5 text-xs font-semibold rounded-lg text-slate-400 hover:text-slate-200 transition cursor-pointer";
+                els.memberModeHint.textContent = "Log in with your registered player account. Passwords are SHA-256 hashed.";
+                els.memberSubmitBtn.textContent = "Enter SoelSMP S2 Chat";
+            } else {
+                els.memberModeRegister.className = "flex-1 py-1.5 text-xs font-semibold rounded-lg bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 transition cursor-pointer";
+                els.memberModeLogin.className = "flex-1 py-1.5 text-xs font-semibold rounded-lg text-slate-400 hover:text-slate-200 transition cursor-pointer";
+                els.memberModeHint.textContent = "Create a unique username & custom password stored securely in Firestore.";
+                els.memberSubmitBtn.textContent = "Create Account & Join Chat";
+            }
+        }
+
+        /**
+         * Handles Member Login or Account Registration with SHA-256 hashing.
+         */
+        async function handleMemberAuth(e) {
+            e.preventDefault();
+            clearAuthError();
+
+            const rawUsername = els.memberUsername.value.trim();
+            const password = els.memberPassword.value;
+            const shouldSave = els.memberSavePass.checked;
+
+            if (rawUsername.length < 3 || rawUsername.length > 20) {
+                showAuthError("Username must be between 3 and 20 characters.");
+                return;
+            }
+            if (!/^[a-zA-Z0-9_ -]+$/.test(rawUsername)) {
+                showAuthError("Username may only contain letters, numbers, spaces, underscores, or hyphens.");
+                return;
+            }
+            if (password.length < 4) {
+                showAuthError("Password must be at least 4 characters long.");
+                return;
+            }
+
+            const normalizedUsername = rawUsername.toLowerCase();
+            if (normalizedUsername === "admin") {
+                showAuthError("The username 'Admin' is reserved. Use the Admin Access tab.");
+                return;
+            }
+
+            els.memberSubmitBtn.disabled = true;
+            const originalLabel = els.memberSubmitBtn.textContent;
+            els.memberSubmitBtn.textContent = "Authenticating...";
+
+            try {
+                const passwordHash = await hashPassword(password);
+
+                if (useFallbackMemory) {
+                    const existing = memoryFallback.users.get(normalizedUsername);
+                    if (memberAuthMode === "register") {
+                        if (existing) {
+                            showAuthError("That username is already taken. Switch to 'Existing Account' to log in.");
+                            return;
+                        }
+                        memoryFallback.users.set(normalizedUsername, {
+                            username: rawUsername,
+                            normalizedUsername,
+                            passwordHash,
+                            role: "PLAYER",
+                            createdAt: Date.now()
+                        });
+                    } else {
+                        if (!existing || existing.passwordHash !== passwordHash) {
+                            showAuthError("Invalid username or password. Need an account? Click 'Create Account'.");
+                            return;
+                        }
+                    }
+                } else {
+                    if (!firebaseUser) {
+                        showAuthError("Connecting to server... Please try again in a moment.");
+                        return;
+                    }
+
+                    // RULE 1 Path: /artifacts/{appId}/public/data/users/{normalizedUsername}
+                    const userDocRef = doc(db, "artifacts", appId, "public", "data", "users", normalizedUsername);
+                    const userSnap = await getDoc(userDocRef);
+
+                    if (memberAuthMode === "register") {
+                        if (userSnap.exists()) {
+                            showAuthError("Username already registered! Switch to 'Existing Account' to sign in.");
+                            return;
+                        }
+                        await setDoc(userDocRef, {
+                            username: rawUsername,
+                            normalizedUsername,
+                            passwordHash,
+                            role: "PLAYER",
+                            createdAt: Date.now()
+                        });
+                        showToast(`Account '${rawUsername}' created!`, "success");
+                    } else {
+                        if (!userSnap.exists()) {
+                            showAuthError("Account not found. Click 'Create Account' above to register first.");
+                            return;
+                        }
+                        const userData = userSnap.data();
+                        if (userData.passwordHash !== passwordHash) {
+                            showAuthError("Incorrect password for this player account.");
+                            return;
+                        }
+                    }
+                }
+
+                // Persist or clear saved credentials on this device
+                await persistDeviceCredentials(shouldSave, {
+                    mode: "member",
+                    username: rawUsername,
+                    password,
+                    savedAt: Date.now()
+                });
+
+                enterChatRoom({
+                    username: rawUsername,
+                    role: "PLAYER",
+                    sessionId: `${normalizedUsername}_${crypto.randomUUID().slice(0, 8)}`
+                });
+            } catch (err) {
+                console.error("Member auth error:", err);
+                showAuthError("Authentication failed due to a network error. Please try again.");
+            } finally {
+                els.memberSubmitBtn.disabled = false;
+                els.memberSubmitBtn.textContent = originalLabel;
+            }
+        }
+
+        /**
+         * Handles Admin Access login requiring the exact master password 'soelsmp s2'.
+         */
+        async function handleAdminAuth(e) {
+            e.preventDefault();
+            clearAuthError();
+
+            const rawName = els.adminDisplayName.value.trim();
+            const adminName = rawName.length > 0 ? rawName : "Admin";
+            const password = els.adminPassword.value;
+            const shouldSave = els.adminSavePass.checked;
+
+            // Strict validation against master admin password
+            if (password !== MASTER_ADMIN_PASSWORD) {
+                showAuthError("Access Denied: Invalid Master Admin Password.");
+                return;
+            }
+
+            els.adminSubmitBtn.disabled = true;
+            els.adminSubmitBtn.textContent = "Verifying Staff Key...";
+
+            try {
+                await persistDeviceCredentials(shouldSave, {
+                    mode: "admin",
+                    adminName,
+                    password,
+                    savedAt: Date.now()
+                });
+
+                enterChatRoom({
+                    username: adminName,
+                    role: "ADMIN",
+                    sessionId: `admin_${crypto.randomUUID().slice(0, 8)}`
+                });
+                showToast(`Admin console unlocked as ${adminName}`, "admin");
+            } finally {
+                els.adminSubmitBtn.disabled = false;
+                els.adminSubmitBtn.textContent = "Unlock Admin Console";
+            }
+        }
+
+        /**
+         * One-Click Login handler using saved device credentials.
+         */
+        async function handleQuickLogin() {
+            if (!savedCredentialsCache) return;
+            if (savedCredentialsCache.mode === "admin") {
+                switchAuthTab("admin");
+                els.adminDisplayName.value = savedCredentialsCache.adminName || "";
+                els.adminPassword.value = savedCredentialsCache.password || "";
+                els.adminForm.dispatchEvent(new Event("submit"));
+            } else {
+                switchAuthTab("member");
+                switchMemberSubMode("login");
+                els.memberUsername.value = savedCredentialsCache.username || "";
+                els.memberPassword.value = savedCredentialsCache.password || "";
+                els.memberForm.dispatchEvent(new Event("submit"));
+            }
+        }
+
+        // =========================================================================
+        // 7. ENTERING & LEAVING THE REAL-TIME CHAT ROOM
+        // =========================================================================
+
+        function enterChatRoom(userProfile) {
+            currentUser = userProfile;
+            isInitialMessagesLoad = true;
+            isAnnouncementMode = false;
+            updateAnnouncementUI();
+
+            // Update Header & Sidebar identity badges
+            els.headerUsername.textContent = currentUser.username;
+            if (currentUser.role === "ADMIN") {
+                els.headerRoleBadge.textContent = "[ADMIN]";
+                els.headerRoleBadge.className = "admin-badge-glow text-[10px] font-mono font-extrabold px-2 py-0.5 rounded text-white";
+                els.sidebarSelfRole.textContent = "[ADMIN]";
+                els.sidebarSelfRole.className = "font-mono font-bold text-amber-400";
+                els.adminControlBar.classList.remove("hidden");
+            } else {
+                els.headerRoleBadge.textContent = "[PLAYER]";
+                els.headerRoleBadge.className = "text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30";
+                els.sidebarSelfRole.textContent = "[PLAYER]";
+                els.sidebarSelfRole.className = "font-mono font-bold text-cyan-400";
+                els.adminControlBar.classList.add("hidden");
+            }
+
+            // Switch Views
+            els.authView.classList.add("hidden");
+            els.chatView.classList.remove("hidden");
+
+            // Start Real-Time Listeners & Presence Heartbeat
+            startMessagesListener();
+            startPresenceTracking();
+            els.messageInput.focus();
+        }
+
+        async function logoutChatRoom() {
+            // Clean up presence
+            if (presenceInterval) {
+                clearInterval(presenceInterval);
+                presenceInterval = null;
+            }
+            if (currentUser) {
+                await removePresence(currentUser.sessionId);
+            }
+            if (unsubscribeMessages) {
+                unsubscribeMessages();
+                unsubscribeMessages = null;
+            }
+            if (unsubscribePresence) {
+                unsubscribePresence();
+                unsubscribePresence = null;
+            }
+
+            currentUser = null;
+            cachedMessages = [];
+            els.chatView.classList.add("hidden");
+            els.authView.classList.remove("hidden");
+            await loadSavedDeviceCredentials();
+        }
+
+        // =========================================================================
+        // 8. REAL-TIME MESSAGES (Firestore onSnapshot & Memory Sorting - Rule 2)
+        // =========================================================================
+
+        function startMessagesListener() {
+            if (useFallbackMemory) {
+                renderMessagesList(memoryFallback.messages);
+                return;
+            }
+            if (!firebaseUser || !db) return;
+
+            // RULE 1 & RULE 2: Simple collection() listener without orderBy/limit; sort in JS memory
+            const messagesCol = collection(db, "artifacts", appId, "public", "data", "messages");
+            unsubscribeMessages = onSnapshot(
+                messagesCol,
+                (snapshot) => {
+                    const msgs = [];
+                    snapshot.forEach((docSnap) => {
+                        msgs.push({ id: docSnap.id, ...docSnap.data() });
+                    });
+
+                    // Sort chronologically ascending in JavaScript memory
+                    msgs.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+
+                    // Play chime if a new message arrived from someone else after initial load
+                    if (!isInitialMessagesLoad && msgs.length > cachedMessages.length) {
+                        const newest = msgs[msgs.length - 1];
+                        if (newest && currentUser && newest.senderSessionId !== currentUser.sessionId) {
+                            playChatChime(newest.type === "ANNOUNCEMENT" ? "announcement" : "message");
+                        }
+                    }
+
+                    isInitialMessagesLoad = false;
+                    cachedMessages = msgs;
+                    renderMessagesList(msgs);
+                },
+                (error) => {
+                    console.error("Messages listener error:", error);
+                    showToast("Lost connection to live chat stream.", "error");
+                }
+            );
+        }
+
+        /**
+         * Renders the sorted list of messages into the chat feed.
+         */
+        function renderMessagesList(messages) {
+            els.headerMsgCount.textContent = `${messages.length} message${messages.length === 1 ? "" : "s"} in feed`;
+
+            const feed = els.messagesFeed;
+            const wasNearBottom = feed.scrollHeight - feed.scrollTop - feed.clientHeight < 110;
+
+            // Preserve the welcome banner as the first child
+            const welcomeBanner = feed.firstElementChild;
+            feed.innerHTML = "";
+            if (welcomeBanner) feed.appendChild(welcomeBanner);
+
+            if (messages.length === 0) {
+                const emptyState = document.createElement("div");
+                emptyState.className = "text-center py-12 text-slate-500 text-xs font-mono";
+                emptyState.textContent = "No messages yet. Say hello to SoelSMP S2!";
+                feed.appendChild(emptyState);
+                return;
+            }
+
+            const isViewerAdmin = currentUser && currentUser.role === "ADMIN";
+
+            messages.forEach((msg) => {
+                const wrapper = document.createElement("div");
+                const isOwn = currentUser && msg.senderSessionId === currentUser.sessionId;
+                const isMsgAdmin = msg.role === "ADMIN";
+                const isAnnouncement = msg.type === "ANNOUNCEMENT";
+
+                // Delete button markup (ONLY rendered if current viewer is Admin)
+                const deleteBtnHtml = isViewerAdmin
+                    ? `<button type="button" data-delete-msg="${escapeHtml(msg.id)}" title="Delete message (Admin)"
+                        class="delete-msg-btn opacity-70 sm:opacity-0 group-hover:opacity-100 focus:opacity-100 p-1.5 rounded-lg bg-rose-500/15 hover:bg-rose-500/30 text-rose-400 border border-rose-500/30 transition cursor-pointer shrink-0">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                        </svg>
+                       </button>`
+                    : "";
+
+                if (isAnnouncement) {
+                    // Highlighted [ANNOUNCEMENT] Banner Card
+                    wrapper.className = "group announcement-card rounded-2xl p-4 msg-enter transition";
+                    wrapper.innerHTML = `
+                        <div class="flex items-start justify-between gap-3">
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <span class="admin-badge-glow text-[10px] font-mono font-extrabold text-white px-2 py-0.5 rounded">
+                                    [ANNOUNCEMENT]
+                                </span>
+                                <span class="text-xs font-bold text-amber-200">${escapeHtml(msg.username || "Admin")}</span>
+                                <span class="text-[11px] font-mono text-amber-300/70">• ${formatTimestamp(msg.createdAt)}</span>
+                            </div>
+                            ${deleteBtnHtml}
+                        </div>
+                        <p class="text-sm sm:text-[15px] font-semibold text-white mt-2 leading-relaxed break-words whitespace-pre-wrap">${escapeHtml(msg.text || "")}</p>
+                    `;
+                } else {
+                    // Standard Player or Admin Chat Bubble
+                    const avatarClasses = getAvatarStyle(msg.username || "P", msg.role);
+                    const initial = (msg.username || "P").charAt(0).toUpperCase();
+                    const roleBadgeHtml = isMsgAdmin
+                        ? `<span class="admin-badge-glow text-[10px] font-mono font-extrabold text-white px-1.5 py-0.5 rounded">[ADMIN]</span>`
+                        : `<span class="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/25">[PLAYER]</span>`;
+
+                    const cardBg = isMsgAdmin
+                        ? "bg-gradient-to-r from-amber-500/10 to-obsidian-900/90 border-amber-500/35"
+                        : isOwn
+                            ? "bg-emerald-950/35 border-emerald-500/30"
+                            : "bg-obsidian-900/80 border-slate-800/90";
+
+                    wrapper.className = `group flex items-start gap-3 p-3 sm:p-3.5 rounded-2xl border ${cardBg} hover:border-slate-700 transition msg-enter`;
+                    wrapper.innerHTML = `
+                        <div class="w-9 h-9 rounded-xl bg-gradient-to-br ${avatarClasses} border flex items-center justify-center font-bold text-sm shrink-0 mt-0.5 shadow-sm">
+                            ${escapeHtml(initial)}
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center justify-between gap-2">
+                                <div class="flex items-center gap-2 flex-wrap min-w-0">
+                                    <span class="text-xs sm:text-sm font-bold ${isMsgAdmin ? "text-amber-300" : isOwn ? "text-emerald-300" : "text-slate-100"} truncate">
+                                        ${escapeHtml(msg.username || "Unknown")}
+                                    </span>
+                                    ${roleBadgeHtml}
+                                    <span class="text-[11px] font-mono text-slate-500">${formatTimestamp(msg.createdAt)}</span>
+                                </div>
+                                ${deleteBtnHtml}
+                            </div>
+                            <p class="text-sm text-slate-200 mt-1 leading-relaxed break-words whitespace-pre-wrap">${escapeHtml(msg.text || "")}</p>
+                        </div>
+                    `;
+                }
+
+                feed.appendChild(wrapper);
+            });
+
+            if (wasNearBottom) {
+                scrollToBottom();
+            } else {
+                els.scrollBottomBtn.classList.remove("hidden");
+            }
+        }
+
+        function scrollToBottom() {
+            els.messagesFeed.scrollTop = els.messagesFeed.scrollHeight;
+            els.scrollBottomBtn.classList.add("hidden");
+        }
+
+        /**
+         * Sends a new chat message or Admin announcement to Firestore.
+         */
+        async function handleSendMessage(e) {
+            e.preventDefault();
+            if (!currentUser) return;
+
+            const text = els.messageInput.value.trim();
+            if (!text) return;
+            if (text.length > 500) {
+                showToast("Message exceeds 500 character limit.", "error");
+                return;
+            }
+
+            const msgType = currentUser.role === "ADMIN" && isAnnouncementMode ? "ANNOUNCEMENT" : "CHAT";
+            const payload = {
+                username: currentUser.username,
+                role: currentUser.role,
+                senderSessionId: currentUser.sessionId,
+                type: msgType,
+                text,
+                createdAt: Date.now()
+            };
+
+            els.messageInput.value = "";
+            updateCharCounter();
+
+            // Reset announcement mode after broadcasting one announcement
+            if (isAnnouncementMode) {
+                isAnnouncementMode = false;
+                updateAnnouncementUI();
+            }
+
+            playChatChime(msgType === "ANNOUNCEMENT" ? "announcement" : "send");
+
+            try {
+                if (useFallbackMemory) {
+                    memoryFallback.messages.push({ id: crypto.randomUUID(), ...payload });
+                    cachedMessages = memoryFallback.messages;
+                    renderMessagesList(cachedMessages);
+                    scrollToBottom();
+                    return;
+                }
+
+                if (!firebaseUser || !db) return;
+                const messagesCol = collection(db, "artifacts", appId, "public", "data", "messages");
+                await addDoc(messagesCol, payload);
+                scrollToBottom();
+            } catch (err) {
+                console.error("Send message error:", err);
+                showToast("Failed to send message. Check connection.", "error");
+            }
+        }
+
+        // =========================================================================
+        // 9. ADMIN MODERATION CONTROLS (Delete Single Message & Clear All Chat)
+        // =========================================================================
+
+        function toggleAnnouncementMode(forceState = null) {
+            if (!currentUser || currentUser.role !== "ADMIN") return;
+            isAnnouncementMode = forceState !== null ? forceState : !isAnnouncementMode;
+            updateAnnouncementUI();
+        }
+
+        function updateAnnouncementUI() {
+            if (isAnnouncementMode) {
+                els.announcementBtnLabel.textContent = "Announcement Mode: ON";
+                els.toggleAnnouncementBtn.className = "px-3 py-1.5 rounded-lg text-xs font-bold admin-badge-glow text-white flex items-center gap-1.5 transition cursor-pointer";
+                els.announcementComposerBanner.classList.remove("hidden");
+                els.messageInput.placeholder = "Type a server-wide [ANNOUNCEMENT]...";
+            } else {
+                els.announcementBtnLabel.textContent = "Announcement Mode: OFF";
+                els.toggleAnnouncementBtn.className = "px-3 py-1.5 rounded-lg text-xs font-bold bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 flex items-center gap-1.5 transition cursor-pointer";
+                els.announcementComposerBanner.classList.add("hidden");
+                els.messageInput.placeholder = "Message SoelSMP S2...";
+            }
+        }
+
+        /**
+         * Deletes an individual message by document ID (Admin only).
+         */
+        async function deleteSingleMessage(messageId) {
+            if (!currentUser || currentUser.role !== "ADMIN" || !messageId) return;
+
+            try {
+                if (useFallbackMemory) {
+                    memoryFallback.messages = memoryFallback.messages.filter(m => m.id !== messageId);
+                    cachedMessages = memoryFallback.messages;
+                    renderMessagesList(cachedMessages);
+                    showToast("Message deleted.", "admin");
+                    return;
+                }
+
+                if (!firebaseUser || !db) return;
+                const msgRef = doc(db, "artifacts", appId, "public", "data", "messages", messageId);
+                await deleteDoc(msgRef);
+                showToast("Message removed by Admin.", "admin");
+            } catch (err) {
+                console.error("Delete message error:", err);
+                showToast("Could not delete message.", "error");
+            }
+        }
+
+        /**
+         * Clears the entire chat history after custom confirmation modal (Admin only).
+         */
+        async function handleClearEntireChat() {
+            if (!currentUser || currentUser.role !== "ADMIN") return;
+
+            const confirmed = await showConfirmModal(
+                "Clear Entire Chat History?",
+                "This will permanently delete all messages in SoelSMP S2 Chat for every player. This action cannot be undone.",
+                "Wipe All Messages"
+            );
+
+            if (!confirmed) return;
+
+            try {
+                if (useFallbackMemory) {
+                    memoryFallback.messages = [];
+                    cachedMessages = [];
+                    renderMessagesList([]);
+                    showToast("Chat history wiped.", "admin");
+                    return;
+                }
+
+                if (!firebaseUser || !db) return;
+                const deletePromises = cachedMessages.map((msg) =>
+                    deleteDoc(doc(db, "artifacts", appId, "public", "data", "messages", msg.id))
+                );
+                await Promise.all(deletePromises);
+                showToast("Entire chat history cleared by Admin.", "admin");
+            } catch (err) {
+                console.error("Clear chat error:", err);
+                showToast("Failed to clear some messages.", "error");
+            }
+        }
+
+        // =========================================================================
+        // 10. REAL-TIME ONLINE MEMBERS PRESENCE TRACKING
+        // =========================================================================
+
+        async function updateOwnPresence() {
+            if (!currentUser) return;
+            const presencePayload = {
+                sessionId: currentUser.sessionId,
+                username: currentUser.username,
+                role: currentUser.role,
+                lastSeen: Date.now()
+            };
+
+            if (useFallbackMemory) {
+                memoryFallback.presence.set(currentUser.sessionId, presencePayload);
+                renderOnlineMembers(Array.from(memoryFallback.presence.values()));
+                return;
+            }
+
+            if (!firebaseUser || !db) return;
+            try {
+                const presRef = doc(db, "artifacts", appId, "public", "data", "presence", currentUser.sessionId);
+                await setDoc(presRef, presencePayload);
+            } catch (err) {
+                console.warn("Presence heartbeat error:", err);
+            }
+        }
+
+        async function removePresence(sessionId) {
+            if (useFallbackMemory) {
+                memoryFallback.presence.delete(sessionId);
+                return;
+            }
+            if (!firebaseUser || !db || !sessionId) return;
+            try {
+                await deleteDoc(doc(db, "artifacts", appId, "public", "data", "presence", sessionId));
+            } catch (_) {
+                // Ignore cleanup errors on unload
+            }
+        }
+
+        function startPresenceTracking() {
+            updateOwnPresence();
+            presenceInterval = setInterval(updateOwnPresence, 25000);
+
+            if (useFallbackMemory) return;
+            if (!firebaseUser || !db) return;
+
+            const presCol = collection(db, "artifacts", appId, "public", "data", "presence");
+            unsubscribePresence = onSnapshot(
+                presCol,
+                (snapshot) => {
+                    const now = Date.now();
+                    const activeList = [];
+                    snapshot.forEach((docSnap) => {
+                        const data = docSnap.data();
+                        // Consider active if heartbeat received within the last 75 seconds
+                        if (data && now - (data.lastSeen || 0) < 75000) {
+                            activeList.push(data);
+                        }
+                    });
+                    renderOnlineMembers(activeList);
+                },
+                (err) => {
+                    console.warn("Presence listener error:", err);
+                }
+            );
+        }
+
+        function renderOnlineMembers(rawMembers) {
+            // Deduplicate by username + role while always ensuring currentUser appears
+            const uniqueMap = new Map();
+            if (currentUser) {
+                uniqueMap.set(`${currentUser.role}:${currentUser.username.toLowerCase()}`, currentUser);
+            }
+            rawMembers.forEach((m) => {
+                const key = `${m.role}:${(m.username || "").toLowerCase()}`;
+                if (!uniqueMap.has(key)) {
+                    uniqueMap.set(key, m);
+                }
+            });
+
+            const members = Array.from(uniqueMap.values());
+            const admins = members.filter(m => m.role === "ADMIN").sort((a, b) => a.username.localeCompare(b.username));
+            const players = members.filter(m => m.role !== "ADMIN").sort((a, b) => a.username.localeCompare(b.username));
+
+            els.sidebarOnlineCount.textContent = members.length;
+            els.mobileOnlineCount.textContent = members.length;
+
+            let html = "";
+
+            if (admins.length > 0) {
+                html += `
+                    <div>
+                        <p class="text-[10px] font-mono font-bold uppercase tracking-wider text-amber-400/90 px-2 mb-1.5">
+                            Staff / Admins — ${admins.length}
+                        </p>
+                        <div class="space-y-1">
+                            ${admins.map(a => `
+                                <div class="flex items-center justify-between gap-2 px-2.5 py-2 rounded-xl bg-amber-500/10 border border-amber-500/25">
+                                    <div class="flex items-center gap-2.5 min-w-0">
+                                        <div class="relative shrink-0">
+                                            <div class="w-7 h-7 rounded-lg bg-gradient-to-br from-amber-500 to-rose-600 flex items-center justify-center text-xs font-bold text-white">
+                                                ${escapeHtml(a.username.charAt(0).toUpperCase())}
+                                            </div>
+                                            <span class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-400 border-2 border-obsidian-900"></span>
+                                        </div>
+                                        <span class="text-xs font-bold text-amber-200 truncate">${escapeHtml(a.username)}</span>
+                                    </div>
+                                    <span class="admin-badge-glow text-[9px] font-mono font-extrabold text-white px-1.5 py-0.5 rounded shrink-0">[ADMIN]</span>
+                                </div>
+                            `).join("")}
+                        </div>
+                    </div>
+                `;
+            }
+
+            if (players.length > 0) {
+                html += `
+                    <div>
+                        <p class="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400 px-2 mb-1.5">
+                            Online Players — ${players.length}
+                        </p>
+                        <div class="space-y-1">
+                            ${players.map(p => `
+                                <div class="flex items-center justify-between gap-2 px-2.5 py-2 rounded-xl hover:bg-slate-800/60 transition">
+                                    <div class="flex items-center gap-2.5 min-w-0">
+                                        <div class="relative shrink-0">
+                                            <div class="w-7 h-7 rounded-lg bg-gradient-to-br ${getAvatarStyle(p.username, "PLAYER")} flex items-center justify-center text-xs font-bold">
+                                                ${escapeHtml(p.username.charAt(0).toUpperCase())}
+                                            </div>
+                                            <span class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-400 border-2 border-obsidian-900"></span>
+                                        </div>
+                                        <span class="text-xs font-semibold text-slate-200 truncate">${escapeHtml(p.username)}</span>
+                                    </div>
+                                    <span class="text-[9px] font-mono font-bold text-emerald-300 bg-emerald-500/15 border border-emerald-500/25 px-1.5 py-0.5 rounded shrink-0">[PLAYER]</span>
+                                </div>
+                            `).join("")}
+                        </div>
+                    </div>
+                `;
+            }
+
+            els.onlineMembersList.innerHTML = html;
+        }
+
+        // =========================================================================
+        // 11. EVENT LISTENERS & UI INTERACTIVITY
+        // =========================================================================
+
+        function updateCharCounter() {
+            const len = els.messageInput.value.length;
+            els.charCounter.textContent = `${len}/500`;
+            if (len >= 480) {
+                els.charCounter.className = "absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-mono text-rose-400 font-bold pointer-events-none";
+            } else if (len >= 400) {
+                els.charCounter.className = "absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-mono text-amber-400 pointer-events-none";
+            } else {
+                els.charCounter.className = "absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-mono text-slate-500 pointer-events-none";
+            }
+        }
+
+        // Auth Tab Switching
+        els.tabMember.addEventListener("click", () => switchAuthTab("member"));
+        els.tabAdmin.addEventListener("click", () => switchAuthTab("admin"));
+        els.memberModeLogin.addEventListener("click", () => switchMemberSubMode("login"));
+        els.memberModeRegister.addEventListener("click", () => switchMemberSubMode("register"));
+
+        // Password Visibility Toggles
+        document.querySelectorAll(".toggle-pass-btn").forEach((btn) => {
+            btn.addEventListener("click", () => {
+                const inputId = btn.getAttribute("data-toggle-pass");
+                const input = document.getElementById(inputId);
+                if (input) {
+                    input.type = input.type === "password" ? "text" : "password";
+                }
+            });
+        });
+
+        // Auth Form Submissions & Saved Credential Actions
+        els.memberForm.addEventListener("submit", handleMemberAuth);
+        els.adminForm.addEventListener("submit", handleAdminAuth);
+        els.quickLoginBtn.addEventListener("click", handleQuickLogin);
+        els.forgetSavedBtn.addEventListener("click", async () => {
+            await persistDeviceCredentials(false, null);
+            els.savedCard.classList.add("hidden");
+            els.memberPassword.value = "";
+            els.adminPassword.value = "";
+            showToast("Saved password removed from this device.", "info");
+        });
+
+        // Chat Message Sending & Input Feedback
+        els.messageForm.addEventListener("submit", handleSendMessage);
+        els.messageInput.addEventListener("input", updateCharCounter);
+        els.scrollBottomBtn.addEventListener("click", scrollToBottom);
+        els.messagesFeed.addEventListener("scroll", () => {
+            const feed = els.messagesFeed;
+            const isNearBottom = feed.scrollHeight - feed.scrollTop - feed.clientHeight < 100;
+            if (isNearBottom) {
+                els.scrollBottomBtn.classList.add("hidden");
+            }
+        });
+
+        // Delegated Click Listener for Admin Single-Message Delete Buttons
+        els.messagesFeed.addEventListener("click", (e) => {
+            const delBtn = e.target.closest(".delete-msg-btn");
+            if (delBtn) {
+                const msgId = delBtn.getAttribute("data-delete-msg");
+                deleteSingleMessage(msgId);
+            }
+        });
+
+        // Admin Control Bar Actions
+        els.toggleAnnouncementBtn.addEventListener("click", () => toggleAnnouncementMode());
+        els.cancelAnnouncementMode.addEventListener("click", () => toggleAnnouncementMode(false));
+        els.clearChatBtn.addEventListener("click", handleClearEntireChat);
+
+        // Sound Effects Toggle
+        els.soundToggleBtn.addEventListener("click", () => {
+            soundEnabled = !soundEnabled;
+            els.soundIconOn.classList.toggle("hidden", !soundEnabled);
+            els.soundIconOff.classList.toggle("hidden", soundEnabled);
+            showToast(soundEnabled ? "Sound chimes enabled" : "Sound chimes muted", "info");
+        });
+
+        // Mobile Online Members Drawer Controls
+        const openMembersDrawer = () => {
+            els.membersSidebar.classList.remove("translate-x-full");
+            els.membersBackdrop.classList.remove("hidden");
+        };
+        const closeMembersDrawer = () => {
+            els.membersSidebar.classList.add("translate-x-full");
+            els.membersBackdrop.classList.add("hidden");
+        };
+        els.mobileMembersBtn.addEventListener("click", openMembersDrawer);
+        els.closeMembersDrawer.addEventListener("click", closeMembersDrawer);
+        els.membersBackdrop.addEventListener("click", closeMembersDrawer);
+
+        // Logout & Window Unload Cleanup
+        els.logoutBtn.addEventListener("click", logoutChatRoom);
+        window.addEventListener("beforeunload", () => {
+            if (currentUser) {
+                removePresence(currentUser.sessionId);
+            }
+        });
+
+        // Boot Application
+        window.addEventListener("DOMContentLoaded", () => {
+            initializeBackend();
+        });
+    </script>
+</body>
+</html>
+```
